@@ -59,6 +59,11 @@ class MultipleBeanCandidatesLabTest {
         public Optional<BankAccount> findById(UUID accountId) {
             return Optional.empty();
         }
+
+        @Override
+        public Optional<BankAccount> findByIdForUpdate(UUID accountId) {
+            return Optional.empty();
+        }
     }
 }
 
