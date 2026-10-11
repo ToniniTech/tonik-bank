@@ -34,6 +34,12 @@ public class JpaAccountRepositoryAdapter implements AccountRepository {
         return repository.findById(accountId).map(AccountJpaEntity::toDomain);
     }
 
+    @Override
+    public Optional<BankAccount> findByIdForUpdate(UUID accountId) {
+        return repository.findByIdForUpdate(accountId)
+                .map(AccountJpaEntity::toDomain);
+    }
+
     private static AccountJpaEntity update(AccountJpaEntity entity, BankAccount account) {
         entity.updateFrom(account);
         return entity;
