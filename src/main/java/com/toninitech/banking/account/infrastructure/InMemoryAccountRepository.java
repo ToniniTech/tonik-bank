@@ -2,6 +2,9 @@ package com.toninitech.banking.account.infrastructure;
 
 import com.toninitech.banking.account.application.AccountRepository;
 import com.toninitech.banking.account.domain.BankAccount;
+import com.toninitech.banking.account.infrastructure.persistence.AccountJpaEntity;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.stereotype.Repository;
 import org.springframework.context.annotation.Profile;
 
@@ -26,6 +29,12 @@ public class InMemoryAccountRepository implements AccountRepository {
 
     @Override
     public Optional<BankAccount> findById(UUID accountId) {
+        Objects.requireNonNull(accountId, "accountId is required");
+        return Optional.ofNullable(accounts.get(accountId));
+    }
+
+    @Override
+    public Optional<BankAccount> findByIdForUpdate(UUID accountId) {
         Objects.requireNonNull(accountId, "accountId is required");
         return Optional.ofNullable(accounts.get(accountId));
     }
