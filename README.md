@@ -1,76 +1,74 @@
 # Banking Fundamentals Lab
 
-Proyecto educativo incremental para estudiar fundamentos de Java y Spring mediante un dominio bancario pequeno. Cada unidad agrega una sola familia de mecanismos y conserva el dominio libre de dependencias innecesarias.
+Backend REST pequeño para gestionar cuentas bancarias y explorar decisiones de dominio, persistencia y transacciones con Java y Spring Boot.
 
-## Alcance actual
+El proyecto mantiene un alcance acotado: ofrece operaciones sobre cuentas mediante HTTP y conserva la lógica bancaria en un dominio separado de Spring y JPA. Su objetivo es servir como una implementación demostrable y como una base clara para futuras mejoras.
 
-### Unidad 1: Java Core
+## Funcionalidad disponible
 
-- `Money`, value object inmutable basado en `BigDecimal` y `Currency`;
-- `BankAccount`, entidad con identidad estable e invariantes de saldo;
-- excepciones de dominio;
-- laboratorios sobre igualdad, hashing, mutabilidad y dinero.
+### API HTTP
 
-### Unidad 2: Spring Boot basico
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| `POST` | `/api/accounts` | Abre una cuenta con saldo inicial y moneda. |
+| `GET` | `/api/accounts/{accountId}` | Consulta una cuenta. |
+| `POST` | `/api/accounts/{accountId}/debits` | Debita un monto de la cuenta. |
+| `POST` | `/api/accounts/{accountId}/credits` | Acredita un monto a la cuenta. |
 
-- Application Context y component scanning;
-- beans singleton;
-- inyeccion por constructor;
-- controller, servicio de aplicacion y repositorio en memoria;
-- DTO y Bean Validation;
-- manejo centralizado de errores HTTP;
-- pruebas unitarias, `@WebMvcTest` y `@SpringBootTest`;
-- laboratorios de dependencias inexistentes y ambiguas.
+La transferencia entre cuentas está implementada como caso de uso transaccional en la capa de aplicación, pero todavía no está expuesta como endpoint HTTP.
 
-### Unidad 3: JPA, Hibernate y PostgreSQL
+### Decisiones del dominio y persistencia
 
-- entidad de persistencia separada del dominio;
-- adaptador JPA para el puerto `AccountRepository`;
-- migraciones versionadas con Flyway;
-- persistence context e identidad de objetos administrados;
-- estados managed y detached;
-- dirty checking y `flush`;
-- pruebas reales contra PostgreSQL con Testcontainers.
+- `Money` representa montos con `BigDecimal` y moneda.
+- `BankAccount` protege sus invariantes de débito, crédito y estado.
+- La aplicación separa la API, los casos de uso, el dominio y los adaptadores de persistencia.
+- PostgreSQL persiste las cuentas; Flyway administra el esquema mediante migraciones.
+- Las operaciones individuales de saldo y las transferencias usan transacciones y bloqueos pesimistas para coordinar cambios concurrentes.
+- La suite automatizada cubre reglas del dominio, casos de uso, persistencia y límites transaccionales. Testcontainers permite ejecutar escenarios de integración con PostgreSQL.
 
-### Unidad 4: Transacciones de Spring
+## Arquitectura
 
-- transferencia atomica entre dos cuentas;
-- `@Transactional` como frontera de aplicacion;
-- commit, rollback y diferencia frente a `flush`;
-- rollback por defecto para `RuntimeException`;
-- laboratorio de excepciones checked y `rollbackFor`;
-- proxy transaccional y self-invocation.
+```mermaid
+flowchart LR
+    Client[Cliente HTTP] --> API[API REST]
+    API --> App[Casos de uso]
+    App --> Domain[Dominio bancario]
+    App --> Port[AccountRepository]
+    Port --> Adapter[Adaptador JPA]
+    Adapter --> DB[(PostgreSQL)]
+```
 
-La aplicacion todavia no define limites transaccionales en los servicios, niveles de
-aislamiento, locking, seguridad ni mensajeria. Esos temas pertenecen a unidades posteriores.
+El dominio no depende de Spring ni de la infraestructura de persistencia. La capa de aplicación coordina los casos de uso y define los límites transaccionales.
 
-## Requisitos
+## Tecnologías
 
-- Java 21;
-- PowerShell o una terminal compatible con Maven Wrapper;
-- Docker Desktop para PostgreSQL local y los laboratorios de persistencia.
+- Java 21
+- Spring Boot
+- Spring Data JPA e Hibernate
+- PostgreSQL y Flyway
+- Maven Wrapper
+- JUnit, Mockito y Testcontainers
+- Docker Compose para PostgreSQL local
 
-## Iniciar PostgreSQL
+## Ejecución local
+
+Requisitos: Java 21 y Docker Desktop.
+
+Inicia PostgreSQL:
 
 ```powershell
 docker compose up -d
 ```
 
-## Ejecutar la aplicacion
-
-En Windows:
+Inicia la aplicación en Windows:
 
 ```powershell
 .\mvnw.cmd spring-boot:run
 ```
 
-Para repasar la Unidad 2 sin base de datos:
+La aplicación queda disponible en `http://localhost:8080`.
 
-```powershell
-.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=in-memory"
-```
-
-Abrir una cuenta desde otra terminal:
+### Abrir una cuenta
 
 ```powershell
 $body = @{
@@ -85,56 +83,41 @@ Invoke-RestMethod `
     -Body $body
 ```
 
-## Ejecutar las pruebas de la Unidad 2
+La respuesta incluye el identificador de la cuenta, que puedes usar en las rutas de consulta, débito y crédito.
+
+### Ejecutar las pruebas
 
 ```powershell
-.\mvnw.cmd "-Dtest=AccountApplicationServiceTest,AccountControllerTest,AccountHttpIntegrationTest,*SpringBeanIdentityLabTest,*MissingBeanLabTest,*MultipleBeanCandidatesLabTest" test
+.\mvnw.cmd `
+    "-Dtest=BankAccountTest,MoneyTest,Money1Test,AccountApplicationServiceTest,AccountMutationConcurrencyIntegrationTest,TransferLockOrderingTest,TransferTransactionIntegrationTest,AccountJpaEntityMappingTest,PostgresAccountRepositoryTest" `
+    test
 ```
 
-Antes de ejecutar los laboratorios, lee y responde las preguntas de [`docs/unit-02-spring-basics.md`](docs/unit-02-spring-basics.md).
+Las pruebas de integración con PostgreSQL usan Testcontainers y requieren Docker.
 
-## Ejecutar las pruebas de la Unidad 3
-
-Con Docker Desktop iniciado:
-
-```powershell
-.\mvnw.cmd "-Dtest=AccountJpaEntityMappingTest,PostgresAccountRepositoryTest,PersistenceContextLabTest" test
-```
-
-Antes de ejecutarlas, completa las predicciones de [`docs/unit-03-jpa-hibernate.md`](docs/unit-03-jpa-hibernate.md).
-
-## Ejecutar las pruebas de la Unidad 4
-
-Con Docker Desktop iniciado:
-
-```powershell
-.\mvnw.cmd "-Dtest=TransferTransactionIntegrationTest" test
-```
-
-Sigue el orden y las predicciones de [`docs/unit-04-transactions.md`](docs/unit-04-transactions.md).
-
-## Estructura actual
+## Estructura
 
 ```text
 src/main/java/com/toninitech/banking/
-├── BankingApplication.java
 ├── account/
-│   ├── api/                 HTTP, DTO y respuestas
-│   ├── application/         casos de uso y puertos
-│   ├── domain/              Java puro de la Unidad 1
-│   └── infrastructure/      adaptadores en memoria y JPA
-└── shared/
-    ├── api/                 traduccion centralizada de errores
-    └── money/               value object de la Unidad 1
+│   ├── api/                 Endpoints, DTO y respuestas HTTP
+│   ├── application/         Casos de uso y puertos
+│   ├── domain/              Entidades, valores y reglas bancarias
+│   └── infrastructure/      Adaptadores en memoria y JPA
+└── shared/                  Tipos y manejo de errores compartidos
 
 src/test/java/com/toninitech/banking/
-├── account/                 pruebas por nivel
-└── learninglabs/            experimentos aislados
+└── account/                 Pruebas de dominio, aplicación, API y persistencia
 ```
 
-## Regla de avance
+## Alcance y próximos objetivos
 
-La Unidad 4 introduce limites transaccionales en un unico caso de uso: la
-transferencia. Antes de avanzar a concurrencia, debes poder explicar el
-persistence context, dirty checking, `flush`, commit y rollback.
+Este proyecto es una demostración backend acotada; no es un sistema bancario listo para producción. Actualmente no incluye autenticación ni autorización, historial contable de movimientos, ni un endpoint HTTP de transferencia.
 
+Los siguientes incrementos se evaluarán por separado, según su valor y alcance:
+
+1. Exponer la transferencia existente mediante un contrato HTTP y documentar su uso.
+2. Definir autenticación y autorización para las operaciones sobre cuentas.
+3. Evaluar un historial auditable de movimientos y las garantías de idempotencia que necesite la API.
+
+Kafka y la separación en microservicios quedan como alternativas futuras, sujetas a una necesidad de negocio y a límites de dominio que las justifiquen.
