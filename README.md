@@ -1,33 +1,33 @@
 # Tonik Bank
 
-Backend REST para gestionar cuentas bancarias y transferencias con Java 21 y Spring Boot. Las cuentas se persisten en PostgreSQL; el dominio bancario está separado de la API y de la infraestructura.
+A REST backend for managing bank accounts and transfers, built with Java 21 and Spring Boot. Accounts are persisted in PostgreSQL, and the banking domain is kept separate from the HTTP API and infrastructure.
 
-## Funcionalidad
+## Features
 
-| Método | Ruta | Descripción |
+| Method | Route | Description |
 | --- | --- | --- |
-| `POST` | `/api/accounts` | Abre una cuenta con saldo inicial y moneda. |
-| `GET` | `/api/accounts/{accountId}` | Consulta una cuenta. |
-| `POST` | `/api/accounts/{accountId}/debits` | Debita un monto. |
-| `POST` | `/api/accounts/{accountId}/credits` | Acredita un monto. |
-| `POST` | `/api/transfers` | Transfiere fondos entre dos cuentas. |
+| `POST` | `/api/accounts` | Opens an account with an initial balance and currency. |
+| `GET` | `/api/accounts/{accountId}` | Retrieves an account. |
+| `POST` | `/api/accounts/{accountId}/debits` | Debits an amount from an account. |
+| `POST` | `/api/accounts/{accountId}/credits` | Credits an amount to an account. |
+| `POST` | `/api/transfers` | Transfers funds between two accounts. |
 
-La capa de aplicación coordina las operaciones y sus transacciones. `Money` representa los montos con `BigDecimal` y moneda; `BankAccount` protege las reglas de saldo. PostgreSQL conserva las cuentas y Flyway administra el esquema.
+The application layer coordinates use cases and transactions. `Money` represents amounts with `BigDecimal` and a currency; `BankAccount` enforces balance rules. PostgreSQL stores accounts, and Flyway manages the schema.
 
-## Ejecución local
+## Run locally
 
-Requisitos: Java 21 y Docker Desktop.
+Requirements: Java 21 and Docker Desktop.
 
-Inicia PostgreSQL y la aplicación:
+Start PostgreSQL and the application:
 
 ```powershell
 docker compose up -d
 .\mvnw.cmd spring-boot:run
 ```
 
-La API queda disponible en `http://localhost:8080`.
+The API is available at `http://localhost:8080`.
 
-**Abrir una cuenta**
+**Open an account**
 
 ```powershell
 $body = @{
@@ -42,16 +42,16 @@ Invoke-RestMethod `
     -Body $body
 ```
 
-Guarda el `id` de la respuesta. Puedes usarlo para consultar la cuenta o ejecutar operaciones de saldo.
+Save the `id` from the response. Use it to retrieve the account or perform balance operations.
 
-**Transferir entre cuentas**
+**Transfer between accounts**
 
-Reemplaza los identificadores por los de dos cuentas existentes. Una transferencia correcta responde `204 No Content`.
+Replace the identifiers with those of two existing accounts. A successful transfer returns `204 No Content`.
 
 ```powershell
 $body = @{
-    sourceAccountId = 'UUID-CUENTA-ORIGEN'
-    targetAccountId = 'UUID-CUENTA-DESTINO'
+    sourceAccountId = 'SOURCE-ACCOUNT-UUID'
+    targetAccountId = 'TARGET-ACCOUNT-UUID'
     amount = 25.00
     currency = 'USD'
 } | ConvertTo-Json
@@ -63,7 +63,7 @@ Invoke-RestMethod `
     -Body $body
 ```
 
-## Pruebas
+## Tests
 
 ```powershell
 .\mvnw.cmd `
@@ -71,8 +71,8 @@ Invoke-RestMethod `
     test
 ```
 
-Las pruebas de integración con PostgreSQL usan Testcontainers y requieren Docker Desktop.
+PostgreSQL integration tests use Testcontainers and require Docker Desktop.
 
-## Alcance
+## Scope
 
-Tonik Bank es un backend demostrativo, no un sistema bancario listo para producción. Actualmente no incluye autenticación ni autorización, historial contable de movimientos ni garantías de idempotencia para solicitudes repetidas.
+Tonik Bank is a demonstrative backend, not a production-ready banking system. It currently does not include authentication or authorization, an accounting ledger, or idempotency guarantees for repeated requests.
