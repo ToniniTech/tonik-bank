@@ -1,74 +1,33 @@
-# Banking Fundamentals Lab
+# Tonik Bank
 
-Backend REST pequeño para gestionar cuentas bancarias y explorar decisiones de dominio, persistencia y transacciones con Java y Spring Boot.
+A REST backend for managing bank accounts and transfers, built with Java 21 and Spring Boot. Accounts are persisted in PostgreSQL, and the banking domain is kept separate from the HTTP API and infrastructure.
 
-El proyecto mantiene un alcance acotado: ofrece operaciones sobre cuentas mediante HTTP y conserva la lógica bancaria en un dominio separado de Spring y JPA. Su objetivo es servir como una implementación demostrable y como una base clara para futuras mejoras.
+## Features
 
-## Funcionalidad disponible
-
-### API HTTP
-
-| Método | Ruta | Descripción |
+| Method | Route | Description |
 | --- | --- | --- |
-| `POST` | `/api/accounts` | Abre una cuenta con saldo inicial y moneda. |
-| `GET` | `/api/accounts/{accountId}` | Consulta una cuenta. |
-| `POST` | `/api/accounts/{accountId}/debits` | Debita un monto de la cuenta. |
-| `POST` | `/api/accounts/{accountId}/credits` | Acredita un monto a la cuenta. |
+| `POST` | `/api/accounts` | Opens an account with an initial balance and currency. |
+| `GET` | `/api/accounts/{accountId}` | Retrieves an account. |
+| `POST` | `/api/accounts/{accountId}/debits` | Debits an amount from an account. |
+| `POST` | `/api/accounts/{accountId}/credits` | Credits an amount to an account. |
+| `POST` | `/api/transfers` | Transfers funds between two accounts. |
 
-La transferencia entre cuentas está implementada como caso de uso transaccional en la capa de aplicación, pero todavía no está expuesta como endpoint HTTP.
+The application layer coordinates use cases and transactions. `Money` represents amounts with `BigDecimal` and a currency; `BankAccount` enforces balance rules. PostgreSQL stores accounts, and Flyway manages the schema.
 
-### Decisiones del dominio y persistencia
+## Run locally
 
-- `Money` representa montos con `BigDecimal` y moneda.
-- `BankAccount` protege sus invariantes de débito, crédito y estado.
-- La aplicación separa la API, los casos de uso, el dominio y los adaptadores de persistencia.
-- PostgreSQL persiste las cuentas; Flyway administra el esquema mediante migraciones.
-- Las operaciones individuales de saldo y las transferencias usan transacciones y bloqueos pesimistas para coordinar cambios concurrentes.
-- La suite automatizada cubre reglas del dominio, casos de uso, persistencia y límites transaccionales. Testcontainers permite ejecutar escenarios de integración con PostgreSQL.
+Requirements: Java 21 and Docker Desktop.
 
-## Arquitectura
-
-```mermaid
-flowchart LR
-    Client[Cliente HTTP] --> API[API REST]
-    API --> App[Casos de uso]
-    App --> Domain[Dominio bancario]
-    App --> Port[AccountRepository]
-    Port --> Adapter[Adaptador JPA]
-    Adapter --> DB[(PostgreSQL)]
-```
-
-El dominio no depende de Spring ni de la infraestructura de persistencia. La capa de aplicación coordina los casos de uso y define los límites transaccionales.
-
-## Tecnologías
-
-- Java 21
-- Spring Boot
-- Spring Data JPA e Hibernate
-- PostgreSQL y Flyway
-- Maven Wrapper
-- JUnit, Mockito y Testcontainers
-- Docker Compose para PostgreSQL local
-
-## Ejecución local
-
-Requisitos: Java 21 y Docker Desktop.
-
-Inicia PostgreSQL:
+Start PostgreSQL and the application:
 
 ```powershell
 docker compose up -d
-```
-
-Inicia la aplicación en Windows:
-
-```powershell
 .\mvnw.cmd spring-boot:run
 ```
 
-La aplicación queda disponible en `http://localhost:8080`.
+The API is available at `http://localhost:8080`.
 
-### Abrir una cuenta
+**Open an account**
 
 ```powershell
 $body = @{
@@ -83,41 +42,37 @@ Invoke-RestMethod `
     -Body $body
 ```
 
-La respuesta incluye el identificador de la cuenta, que puedes usar en las rutas de consulta, débito y crédito.
+Save the `id` from the response. Use it to retrieve the account or perform balance operations.
 
-### Ejecutar las pruebas
+**Transfer between accounts**
+
+Replace the identifiers with those of two existing accounts. A successful transfer returns `204 No Content`.
+
+```powershell
+$body = @{
+    sourceAccountId = 'SOURCE-ACCOUNT-UUID'
+    targetAccountId = 'TARGET-ACCOUNT-UUID'
+    amount = 25.00
+    currency = 'USD'
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+    -Method Post `
+    -Uri 'http://localhost:8080/api/transfers' `
+    -ContentType 'application/json' `
+    -Body $body
+```
+
+## Tests
 
 ```powershell
 .\mvnw.cmd `
-    "-Dtest=BankAccountTest,MoneyTest,Money1Test,AccountApplicationServiceTest,AccountMutationConcurrencyIntegrationTest,TransferLockOrderingTest,TransferTransactionIntegrationTest,AccountJpaEntityMappingTest,PostgresAccountRepositoryTest" `
+    "-Dtest=BankAccountTest,MoneyTest,Money1Test,AccountApplicationServiceTest,TransferApplicationServiceTest,TransferTransactionIntegrationTest,AccountControllerTest,AccountHttpIntegrationTest,TransferControllerTest,TransferHttpIntegrationTest,AccountJpaEntityMappingTest,PostgresAccountRepositoryTest" `
     test
 ```
 
-Las pruebas de integración con PostgreSQL usan Testcontainers y requieren Docker.
+PostgreSQL integration tests use Testcontainers and require Docker Desktop.
 
-## Estructura
+## Scope
 
-```text
-src/main/java/com/toninitech/banking/
-├── account/
-│   ├── api/                 Endpoints, DTO y respuestas HTTP
-│   ├── application/         Casos de uso y puertos
-│   ├── domain/              Entidades, valores y reglas bancarias
-│   └── infrastructure/      Adaptadores en memoria y JPA
-└── shared/                  Tipos y manejo de errores compartidos
-
-src/test/java/com/toninitech/banking/
-└── account/                 Pruebas de dominio, aplicación, API y persistencia
-```
-
-## Alcance y próximos objetivos
-
-Este proyecto es una demostración backend acotada; no es un sistema bancario listo para producción. Actualmente no incluye autenticación ni autorización, historial contable de movimientos, ni un endpoint HTTP de transferencia.
-
-Los siguientes incrementos se evaluarán por separado, según su valor y alcance:
-
-1. Exponer la transferencia existente mediante un contrato HTTP y documentar su uso.
-2. Definir autenticación y autorización para las operaciones sobre cuentas.
-3. Evaluar un historial auditable de movimientos y las garantías de idempotencia que necesite la API.
-
-Kafka y la separación en microservicios quedan como alternativas futuras, sujetas a una necesidad de negocio y a límites de dominio que las justifiquen.
+Tonik Bank is a demonstrative backend, not a production-ready banking system. It currently does not include authentication or authorization, an accounting ledger, or idempotency guarantees for repeated requests.
